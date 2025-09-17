@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from langroid.language_models import OpenAIGPTConfig
 from langroid.vector_store import QdrantDBConfig
 from langroid.embedding_models import OpenAIEmbeddingsConfig
-from app.config import settings
+from app.config import Config, settings
 
 load_dotenv()
 
@@ -15,11 +15,11 @@ class LangroidConfig:
     
     # ===== CONFIGURACIÓN DEL MODELO DE LENGUAJE =====
     LLM_CONFIG = OpenAIGPTConfig(
-        chat_model= os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        api_key= os.getenv("OPENAI_API_KEY", ""),
+        chat_model= Config.OPENAI_MODEL,
+        api_key= Config.OPENAI_API_KEY,
         chat_context_length=8000,
-        max_output_tokens=192,
-        temperature=0.3,
+        max_output_tokens=Config.MAX_TOKENS,
+        temperature=Config.TEMPERATURE,
         timeout=30,
     )
     

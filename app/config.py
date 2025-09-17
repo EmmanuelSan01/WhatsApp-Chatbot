@@ -36,10 +36,14 @@ class Settings:
     QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
     QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "deeplearning_kb")    
     
-    # ===== CONFIGURACIÓN DE OPENAI/LLM =====
+    # ===== CONFIGURACIÓN DE LLM =====
+    MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "512"))
+    TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.7"))
+
+    # ===== CONFIGURACIÓN DE OPENAI =====
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-    
+
     # ===== CONFIGURACIÓN DE GOOGLE GENERATIVE AI =====
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GOOGLE_MODEL: str = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")

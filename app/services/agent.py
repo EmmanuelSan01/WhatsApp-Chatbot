@@ -160,7 +160,7 @@ class AgentService:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=600,
+                max_tokens=192,
                 temperature=0.3
             )
             generated_response = response.choices[0].message.content.strip()
@@ -177,7 +177,11 @@ class AgentService:
                     payload = {
                         "contents": [
                             {"parts": [{"text": user_prompt}]}
-                        ]
+                        ],
+                        "generationConfig": {
+                            "maxOutputTokens": Config.MAX_TOKENS,
+                            "temperature": Config.TEMPERATURE
+                        }
                     }
                     async with session.post(url, json=payload) as resp:
                         if resp.status == 200:
