@@ -81,9 +81,11 @@ class MainHypatiaAgent(ChatAgent):
 
     async def handle_user_message(self, message: str, user_id: Optional[int] = None, 
                                   conversation_context: Optional[Dict] = None) -> str:
-        """Maneja mensaje de usuario orquestando múltiples agentes, usando Redis para cacheo de resultados."""
+        """Maneja mensaje de usuario orquestando múltiples agentes, usando Redis para cacheo de resultados. Fallback a Google Gemini si falla OpenAI/Langroid."""
         import time
         start_time = time.time()
+        from app.config import Config
+        import aiohttp
         try:
             # Usar ServiceManager para obtener instancias singleton optimizadas
             from app.services.service_manager import service_manager
@@ -127,22 +129,37 @@ class MainHypatiaAgent(ChatAgent):
                 final_response = await self.llm_response_async(context_prompt)
             except Exception as e:
                 error_msg = str(e)
-                if "shorten prompt history" in error_msg or "token len" in error_msg:
-                    logger.error("[CONTEXT RESET] Se alcanzó el límite de tokens. Limpiando contexto del agente.")
-                    if hasattr(self, 'conversation_history'):
-                        self.conversation_history = []
-                    if hasattr(self.knowledge_agent, 'conversation_history'):
-                        self.knowledge_agent.conversation_history = []
-                    if hasattr(self.sales_agent, 'conversation_history'):
-                        self.sales_agent.conversation_history = []
+                # Fallback a Google Gemini si falla OpenAI/Langroid
+                logger.error(f"Error in MainHypatiaAgent (OpenAI/Langroid): {error_msg}")
+                if Config.GOOGLE_API_KEY:
                     try:
-                        final_response = await self.llm_response_async(context_prompt)
-                    except Exception as e2:
-                        logger.error(f"[CONTEXT RESET] Error tras limpiar contexto: {str(e2)}")
-                        return "El contexto de la conversación era demasiado largo y ha sido reiniciado. Por favor, intenta de nuevo tu consulta."
+                        async with aiohttp.ClientSession() as session:
+                            url = "https://generativelanguage.googleapis.com/v1beta/models/" + Config.GOOGLE_MODEL + ":generateContent?key=" + Config.GOOGLE_API_KEY
+                            payload = {
+                                "contents": [
+                                    {"parts": [{"text": context_prompt}]}
+                                ]
+                            }
+                            async with session.post(url, json=payload) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    try:
+                                        gemini_response = data["candidates"][0]["content"]["parts"][0]["text"]
+                                        self.analytics_agent.track_conversation(message, gemini_response)
+                                        elapsed = time.time() - start_time
+                                        logger.info(f"[RESPONSE TIME] El agente (Gemini) tardó {elapsed:.2f} segundos en generar la respuesta.")
+                                        return gemini_response
+                                    except Exception:
+                                        return "[Google Gemini] No se pudo extraer la respuesta del modelo."
+                                else:
+                                    return f"[Google Gemini] Error en la generación: {resp.status}"
+                    except Exception as ge:
+                        logger.error(f"Error usando Google Gemini API: {str(ge)}")
+                        return "Lo siento, hubo un error generando la respuesta con Google Gemini API. Por favor intenta de nuevo o verifica la configuración."
                 else:
-                    logger.error(f"Error in MainHypatiaAgent: {error_msg}")
-                    return "Lo siento, hubo un error procesando tu consulta. Por favor intenta de nuevo."
+                    return "Lo siento, hubo un error procesando tu consulta y no hay API de Google configurada. Por favor intenta de nuevo."
+
+                return "Lo siento, hubo un error procesando tu consulta. Por favor intenta de nuevo."
 
             self.analytics_agent.track_conversation(message, final_response)
             elapsed = time.time() - start_time

@@ -27,6 +27,11 @@ class WhatsAppController:
         self.chat_controller = ChatController()
         self.usuario_controller = UsuarioController()
 
+    def _fix_markdown_format(self, text: str) -> str:
+        """Reemplaza pares de asteriscos dobles por uno solo en el texto."""
+        if not isinstance(text, str):
+            return text
+        return text.replace('**', '*')
 
     async def process_message(self, webhook_data: dict) -> None:
         try:
@@ -112,6 +117,8 @@ class WhatsAppController:
                         response_text = str(reply)
             else:
                 response_text = "🤖 Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo?"
+            # Corrige el formato Markdown antes de enviar
+            response_text = self._fix_markdown_format(response_text)
             await self._send_whatsapp_message(wa_id, response_text)
             
             # Enviar UNA SOLA notificación WebSocket sobre la conversación actualizada

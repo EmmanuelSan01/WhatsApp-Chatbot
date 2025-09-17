@@ -115,8 +115,11 @@ class AgentService:
 
     async def _generate_response(self, query: str, context: str, user_id: str) -> str:
         """
-        Genera respuesta usando OpenAI con el contexto de la KB real
+        Genera respuesta usando OpenAI con el contexto de la KB real. Si falla, usa Google Generative AI (Gemini).
         """
+        from app.config import Config
+        import aiohttp
+
         system_prompt = """
     Eres HypatIA 🎓, asistente educativo especializado en cursos de Deep Learning y tecnologías afines.
         
@@ -145,12 +148,12 @@ class AgentService:
         Presta especial atención a los indicadores de disponibilidad (✅ Disponible / ❌ No disponible).
         """
 
+        # Intentar con OpenAI
         try:
             if not self.openai_client:
-                return "Lo siento, el servicio de chat inteligente no está disponible en este momento. Verifica que la API key de OpenAI esté configurada correctamente."
+                raise Exception("No OpenAI client")
 
             logger.debug("Sending request to OpenAI...")
-            
             response = await self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -158,16 +161,37 @@ class AgentService:
                     {"role": "user", "content": user_prompt},
                 ],
                 max_tokens=600,
-                temperature=0.3  # Lower temperature for more consistent responses
+                temperature=0.3
             )
-
             generated_response = response.choices[0].message.content.strip()
             logger.debug(f"OpenAI response generated successfully: {len(generated_response)} characters")
             return generated_response
-
         except Exception as e:
             logger.error(f"Error generating response with OpenAI: {str(e)}")
-            return "Lo siento, hubo un error generando la respuesta. Por favor intenta de nuevo o verifica la configuración de OpenAI."
+            # Fallback a Google Generative AI (Gemini)
+            if not Config.GOOGLE_API_KEY:
+                return "Lo siento, hubo un error generando la respuesta y no hay API de Google configurada. Por favor intenta de nuevo o verifica la configuración."
+            try:
+                async with aiohttp.ClientSession() as session:
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/" + Config.GOOGLE_MODEL + ":generateContent?key=" + Config.GOOGLE_API_KEY
+                    payload = {
+                        "contents": [
+                            {"parts": [{"text": user_prompt}]}
+                        ]
+                    }
+                    async with session.post(url, json=payload) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            # Gemini response parsing
+                            try:
+                                return data["candidates"][0]["content"]["parts"][0]["text"]
+                            except Exception:
+                                return "[Google Gemini] No se pudo extraer la respuesta del modelo."
+                        else:
+                            return f"[Google Gemini] Error en la generación: {resp.status}"
+            except Exception as ge:
+                logger.error(f"Error usando Google Gemini API: {str(ge)}")
+                return "Lo siento, hubo un error generando la respuesta con Google Gemini API. Por favor intenta de nuevo o verifica la configuración."
 
 # ==============================
 # Agente Principal (Orquestador)
