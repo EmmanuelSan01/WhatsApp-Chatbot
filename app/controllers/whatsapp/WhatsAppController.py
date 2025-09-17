@@ -28,10 +28,19 @@ class WhatsAppController:
         self.usuario_controller = UsuarioController()
 
     def _fix_markdown_format(self, text: str) -> str:
-        """Reemplaza pares de asteriscos dobles por uno solo en el texto."""
+        """
+        Ajusta el Markdown para mejorar la compatibilidad con mensajes de WhatsApp.
+        """
         if not isinstance(text, str):
             return text
-        return text.replace('**', '*')
+        # Reemplazar '**' por '*'
+        text = text.replace('**', '*')
+        import re
+        # Reemplazar '* ' al inicio de línea por '- '
+        text = re.sub(r'(?m)^\* +', '- ', text)
+        # Eliminar espacios adicionales después de '- '
+        text = re.sub(r'(?m)^- +', '- ', text)
+        return text
 
     async def process_message(self, webhook_data: dict) -> None:
         try:
