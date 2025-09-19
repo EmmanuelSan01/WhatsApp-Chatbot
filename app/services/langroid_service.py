@@ -197,14 +197,11 @@ class LangroidAgentService:
             "agents_available": bool(self.main_agent),
             "agents": {
                 "main_agent": "MainHypatiaAgent - Orquestador principal",
-                "knowledge_agent": "KnowledgeAgent - Búsqueda en base de conocimiento",
-                "sales_agent": "SalesAgent - Recomendaciones y ventas",
                 "analytics_agent": "AnalyticsAgent - Análisis y métricas"
             },
             "capabilities": [
                 "Multi-agent orchestration",
                 "Semantic course search", 
-                "Sales recommendations",
                 "Conversation analytics",
                 "Persistent chat history",
                 "Real-time knowledge base access"

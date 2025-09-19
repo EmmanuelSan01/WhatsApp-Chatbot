@@ -1,13 +1,14 @@
 import redis
 import os
+from app.config import Config
 
 class RedisCache:
     def __init__(self):
         self.client = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=int(os.getenv("REDIS_DB", 0)),
-            password=os.getenv("REDIS_PASSWORD", None),
+            host=Config.REDIS_HOST,
+            port=Config.REDIS_PORT,
+            db=Config.REDIS_DB,
+            password=Config.REDIS_PASSWORD,
             decode_responses=True
         )
 

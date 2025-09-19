@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
+from app.config import Config, settings
 
 # Import all route modules
 from app.routes.categoria.CategoriaRoutes import router as categoria_router
@@ -348,9 +348,9 @@ if __name__ == "__main__":
     import os
     
     # Obtener puerto y host de variables de entorno (para Render) o usar valores por defecto
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "0.0.0.0")
-    
+    port = Config.PORT
+    host = Config.HOST
+
     uvicorn.run(
         "main:app",
         host=host,

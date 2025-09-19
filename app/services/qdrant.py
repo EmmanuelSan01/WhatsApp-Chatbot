@@ -12,21 +12,19 @@ from app.config import *
 
 logger = logging.getLogger(__name__)
 
-QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "deeplearning_kb")
-QDRANT_ENABLED = os.getenv("QDRANT_ENABLED", "true").lower() == "true"
+QDRANT_HOST = Config.QDRANT_HOST
+QDRANT_API_KEY = Config.QDRANT_API_KEY
+QDRANT_COLLECTION_NAME = Config.QDRANT_COLLECTION_NAME
 
-EMBED_MODEL = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
-VECTOR_SIZE = int(os.getenv("VECTOR_SIZE", 384))
+EMBEDDING_MODEL = Config.EMBEDDING_MODEL
+VECTOR_SIZE = Config.VECTOR_SIZE
 
 _client: Optional[QdrantClient] = None
 
 class QdrantService:
     def __init__(self):
         self.client = QdrantClient(
-            url=QDRANT_URL,            
+            host=QDRANT_HOST,
             api_key=QDRANT_API_KEY
         )
         self.collection_name = QDRANT_COLLECTION_NAME

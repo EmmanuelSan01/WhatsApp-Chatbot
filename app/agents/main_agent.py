@@ -9,7 +9,7 @@ from langroid import ChatAgent, ChatAgentConfig
 from langroid.agent.tools import ForwardTool
 
 from app.agents.config import langroid_config
-from .specialized_agents import KnowledgeAgent, SalesAgent, AnalyticsAgent
+from .specialized_agents import AnalyticsAgent
 from .utils import safe_stringify
 
 logger = logging.getLogger(__name__)
@@ -28,23 +28,7 @@ class MainHypatiaAgent(ChatAgent):
     def __init__(self, config: ChatAgentConfig):
         super().__init__(config)
         
-        # Configurar agentes subordinados
-        self.knowledge_agent = KnowledgeAgent(
-            ChatAgentConfig(
-                llm=config.llm,
-                system_message=langroid_config.SYSTEM_PROMPTS["knowledge_agent"],
-                name="KnowledgeAgent"
-            )
-        )
-        
-        self.sales_agent = SalesAgent(
-            ChatAgentConfig(
-                llm=config.llm,
-                system_message=langroid_config.SYSTEM_PROMPTS["sales_agent"],
-                name="SalesAgent"
-            )
-        )
-        
+        # Solo configurar el agente de analíticas
         self.analytics_agent = AnalyticsAgent(
             ChatAgentConfig(
                 llm=config.llm,
@@ -99,32 +83,13 @@ class MainHypatiaAgent(ChatAgent):
                 knowledge_response = cached_result
             else:
                 logger.info(f"[CACHE MISS] Generando nuevo resultado para clave: {cache_key}")
-                knowledge_response = self.knowledge_agent.handle_message_fallback(message)
-                knowledge_response = safe_stringify(knowledge_response)
-                if isinstance(knowledge_response, (dict, list)):
-                    knowledge_response = json.dumps(knowledge_response, ensure_ascii=False)
-                if knowledge_response is None:
-                    knowledge_response = ""
+                # Ya no hay knowledge_agent, solo usar el mensaje original
+                knowledge_response = message
                 redis_cache.set(cache_key, knowledge_response, expire_seconds=600)  # Cache por 10 minutos
 
             self.analytics_agent.track_conversation(message, "")
-            sales_response = self.sales_agent.handle_message_fallback(message, user_id)
-            sales_response = safe_stringify(sales_response)
-            if isinstance(sales_response, (dict, list)):
-                sales_response = json.dumps(sales_response, ensure_ascii=False)
-
-            context_prompt = f"""
-            Consulta del usuario: {message}
-
-            Información de cursos encontrada:
-            {knowledge_response}
-
-            Recomendaciones de ventas:
-            {sales_response}
-
-            Basándote en esta información, proporciona una respuesta completa y útil al usuario.
-            Mantén el tono amigable y comercial de DeepLearning.IA 🥋.
-            """
+            # Generar prompt simple solo con el mensaje del usuario
+            context_prompt = f"Consulta del usuario: {message}\n\nPor favor responde de manera útil y profesional."
             try:
                 final_response = await self.llm_response_async(context_prompt)
             except Exception as e:
